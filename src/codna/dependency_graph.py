@@ -20,6 +20,7 @@ from .ast_parser import (
     Import,
     PythonASTExtractor,
     TreeSitterParser,
+    _get_default_parser,
     parse_source,
 )
 from .graph_models import DependencyGraphData, GraphEdge, GraphNode
@@ -31,7 +32,7 @@ class DependencyGraph:
     def __init__(self) -> None:
         self.graph: nx.DiGraph = nx.DiGraph()
         self._node_id_counter = 0
-        self._parser = TreeSitterParser()
+        self._parser = _get_default_parser()
 
     # ------------------------------------------------------------------
     # Node helpers

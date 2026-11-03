@@ -351,9 +351,24 @@ class PythonASTExtractor:
                         )
 
 
+_default_parser: Optional[TreeSitterParser] = None
+
+
+def _get_default_parser() -> TreeSitterParser:
+    """Get a shared module-level Tree-sitter parser instance.
+
+    Reusing a single parser avoids creating multiple Tree-sitter Language
+    objects, which can cause resource issues on some platforms.
+    """
+    global _default_parser
+    if _default_parser is None:
+        _default_parser = TreeSitterParser()
+    return _default_parser
+
+
 def parse_source(source: bytes, relative_path: str, language: str = "python") -> Optional[FileAST]:
     """Parse a single source file and return its structured AST representation."""
-    parser = TreeSitterParser()
+    parser = _get_default_parser()
     tree = parser.parse(source, language)
     if tree is None:
         return None
