@@ -17,6 +17,27 @@ try:  # pragma: no cover - optional grammar, loaded per language
 except Exception:  # pragma: no cover
     _tspython = None
 
+# Module-level cached Language (created once, reused for all parsers).
+_cached_language: Optional[Language] = None
+
+
+def _get_cached_language() -> Optional[Language]:
+    """Create and cache a single Tree-sitter Language for Python.
+
+    Creating the Language is the expensive step; a fresh Parser is created
+    per parse() call to avoid resource issues on some platforms.
+    """
+    global _cached_language
+    if _cached_language is not None:
+        return _cached_language
+    if _tspython is None:
+        return None
+    try:
+        _cached_language = Language(_tspython.language())
+    except Exception:
+        return None
+    return _cached_language
+
 
 @dataclass
 class Parameter:
@@ -91,28 +112,19 @@ class TreeSitterParser:
     }
 
     def __init__(self) -> None:
-        self._languages: dict[str, Language] = {}
-        self._parsers: dict[str, Parser] = {}
+        pass
 
     def _ensure_language(self, language: str) -> Optional[Language]:
-        if language in self._languages:
-            return self._languages[language]
-        module = self.LANGUAGE_MODULES.get(language)
-        if module is None:
+        if language != "python":
             return None
-        try:
-            lang = Language(module.language())
-        except Exception:
-            return None
-        self._languages[language] = lang
-        self._parsers[language] = Parser(lang)
-        return lang
+        return _get_cached_language()
 
     def parse(self, source: bytes, language: str) -> Optional[Tree]:
         lang = self._ensure_language(language)
         if lang is None:
             return None
-        parser = self._parsers[language]
+        # Create a fresh Parser from the cached Language on each call.
+        parser = Parser(lang)
         return parser.parse(source)
 
 
@@ -351,24 +363,9 @@ class PythonASTExtractor:
                         )
 
 
-_default_parser: Optional[TreeSitterParser] = None
-
-
-def _get_default_parser() -> TreeSitterParser:
-    """Get a shared module-level Tree-sitter parser instance.
-
-    Reusing a single parser avoids creating multiple Tree-sitter Language
-    objects, which can cause resource issues on some platforms.
-    """
-    global _default_parser
-    if _default_parser is None:
-        _default_parser = TreeSitterParser()
-    return _default_parser
-
-
 def parse_source(source: bytes, relative_path: str, language: str = "python") -> Optional[FileAST]:
     """Parse a single source file and return its structured AST representation."""
-    parser = _get_default_parser()
+    parser = TreeSitterParser()
     tree = parser.parse(source, language)
     if tree is None:
         return None
