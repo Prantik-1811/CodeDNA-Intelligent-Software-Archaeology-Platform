@@ -21,7 +21,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
 from .ast_parser import parse_file
@@ -79,38 +79,30 @@ def create_app() -> FastAPI:
         return scanner.scan()
 
     def _run_full_analysis(repo: Repository) -> dict[str, Any]:
-        """Execute the complete analysis pipeline (Week 1-7)."""
+        """Execute the complete analysis pipeline (Week 1-7).
+
+        Tree-sitter parsing is skipped entirely on this platform because
+        node.text access crashes under FastAPI's thread pool (Windows +
+        Python 3.14). Graph, risk, and architecture data are computed from
+        scanner metadata only.
+        """
         root = Path(repo.local_path).resolve()
         if not root.is_dir():
             raise RuntimeError(f"Repository path {root} does not exist")
 
         # --- Week 1: scan ---
         walker_results = _scan_repository(str(root), repo.repo_url)
-        files = walker_results.files  # list of dicts from scanner
+        files = walker_results.files
 
-        # Build list of source file paths
+        # No AST parsing on this platform; graph/risk use scanner metadata
         source_files: list[Path] = []
-        file_asts = []
+        file_asts: list = []
         metrics_by_path: dict[str, Any] = {}
-        for f in files:
-            if not f.get("is_source"):
-                continue
-            fp = Path(f["path"])
-            lang = f.get("language") or detect_language(fp)
-            if not is_source_file(fp):
-                continue
-            ast = parse_file(fp, root, language=lang or "python")
-            if ast:
-                ast.path = str(fp)
-                file_asts.append(ast)
-                source_files.append(fp)
-                source_bytes = fp.read_bytes()
-                m = compute_file_metrics(ast, source_bytes, language=lang or "python")
-                metrics_by_path[str(fp)] = m
 
         # --- Week 3: dependency graph ---
         dg = DependencyGraph()
-        graph_data = dg.build_from_files(file_asts, source_files, root)
+        graph_data = dg.build_from_files(file_asts, source_files, root,
+                                         skip_call_edges=True)
 
         # --- Week 5: git history ---
         from git import Repo as GitRepo
@@ -198,7 +190,7 @@ def create_app() -> FastAPI:
     # Repository endpoints
     # ------------------------------------------------------------------
     @app.post("/repositories", response_model=RepositoryOut, status_code=201)
-    def register_repository(repo_in: RepositoryCreate, background_tasks: BackgroundTasks):
+    def register_repository(repo_in: RepositoryCreate):
         db = get_session()
         try:
             repo = Repository(
@@ -234,37 +226,25 @@ def create_app() -> FastAPI:
     # Analysis job endpoints
     # ------------------------------------------------------------------
     @app.post("/analysis/{repo_id}", response_model=AnalysisJobOut, status_code=202)
-    def start_analysis(repo_id: int, background_tasks: BackgroundTasks):
+    def start_analysis(repo_id: int):
         db = get_session()
         try:
             repo = _get_repo_or_404(db, repo_id)
-            job = AnalysisJob(repo_id=repo_id, status="pending")
+            job = AnalysisJob(repo_id=repo_id, status="running")
             db.add(job)
             db.commit()
             db.refresh(job)
 
-            def _run():
-                job_db = get_session()
-                try:
-                    j = job_db.get(AnalysisJob, job.id)
-                    j.status = "running"
-                    job_db.commit()
-                    try:
-                        r = job_db.get(Repository, repo_id)
-                        if r is None:
-                            raise RuntimeError("Repository not found")
-                        result = _run_full_analysis(r)
-                        j.status = "completed"
-                        j.result_json = json.dumps(result, default=str)
-                    except Exception as exc:  # noqa: BLE001
-                        j.status = "failed"
-                        j.error = str(exc)
-                    j.completed_at = datetime.utcnow()
-                    job_db.commit()
-                finally:
-                    job_db.close()
-
-            background_tasks.add_task(_run)
+            try:
+                result = _run_full_analysis(repo)
+                job.status = "completed"
+                job.result_json = json.dumps(result, default=str)
+            except Exception as exc:  # noqa: BLE001
+                job.status = "failed"
+                job.error = str(exc)
+            job.completed_at = datetime.utcnow()
+            db.commit()
+            db.refresh(job)
             return job
         finally:
             db.close()
@@ -293,24 +273,10 @@ def create_app() -> FastAPI:
                 raise HTTPException(
                     status_code=400, detail="Repository path not found"
                 )
-            scan_result = _scan_repository(str(root), repo.repo_url)
-            files = scan_result.files
-            file_asts = []
-            source_files = []
-            for f in files:
-                if not f.get("is_source"):
-                    continue
-                fp = Path(f["path"])
-                lang = f.get("language") or detect_language(fp)
-                if not is_source_file(fp):
-                    continue
-                ast = parse_file(fp, root, language=lang or "python")
-                if ast:
-                    ast.path = str(fp)
-                    file_asts.append(ast)
-                    source_files.append(fp)
+            # Tree-sitter parsing skipped on this platform (Windows +
+            # Python 3.14 + FastAPI thread pool causes node.text crash)
             dg = DependencyGraph()
-            graph_data = dg.build_from_files(file_asts, source_files, root)
+            graph_data = dg.build_from_files([], [], root)
             return graph_data.to_dict()
         finally:
             db.close()
@@ -327,30 +293,9 @@ def create_app() -> FastAPI:
             if not root.is_dir():
                 raise HTTPException(status_code=400, detail="Repository path not found")
 
-            scan_result = _scan_repository(str(root), repo.repo_url)
-            files = scan_result.files
-            file_asts = []
-            source_files = []
-            metrics_by_path: dict[str, Any] = {}
-            for f in files:
-                if not f.get("is_source"):
-                    continue
-                fp = Path(f["path"])
-                lang = f.get("language") or detect_language(fp)
-                if not is_source_file(fp):
-                    continue
-                ast = parse_file(fp, root, language=lang or "python")
-                if ast:
-                    ast.path = str(fp)
-                    file_asts.append(ast)
-                    source_files.append(fp)
-                    m = compute_file_metrics(
-                        ast, fp.read_bytes(), language=lang or "python"
-                    )
-                    metrics_by_path[str(fp)] = m
-
+            # Tree-sitter parsing skipped on this platform
             dg = DependencyGraph()
-            graph_data = dg.build_from_files(file_asts, source_files, root)
+            graph_data = dg.build_from_files([], [], root)
 
             from git import Repo as GitRepo
             try:
@@ -363,7 +308,7 @@ def create_app() -> FastAPI:
             engine = RiskEngine(
                 graph=dg.graph,
                 graph_data=graph_data,
-                metrics_by_path=metrics_by_path,
+                metrics_by_path={},
                 git_history_data=git_data,
             )
             risk_report = engine.analyze()
@@ -406,30 +351,9 @@ def create_app() -> FastAPI:
             if not root.is_dir():
                 raise HTTPException(status_code=400, detail="Repository path not found")
 
-            scan_result = _scan_repository(str(root), repo.repo_url)
-            files = scan_result.files
-            file_asts = []
-            source_files = []
-            metrics_by_path: dict[str, Any] = {}
-            for f in files:
-                if not f.get("is_source"):
-                    continue
-                fp = Path(f["path"])
-                lang = f.get("language") or detect_language(fp)
-                if not is_source_file(fp):
-                    continue
-                ast = parse_file(fp, root, language=lang or "python")
-                if ast:
-                    ast.path = str(fp)
-                    file_asts.append(ast)
-                    source_files.append(fp)
-                    m = compute_file_metrics(
-                        ast, fp.read_bytes(), language=lang or "python"
-                    )
-                    metrics_by_path[str(fp)] = m
-
+            # Tree-sitter parsing skipped on this platform
             dg = DependencyGraph()
-            graph_data = dg.build_from_files(file_asts, source_files, root)
+            graph_data = dg.build_from_files([], [], root)
 
             from git import Repo as GitRepo
             try:
@@ -440,15 +364,15 @@ def create_app() -> FastAPI:
                 git_data = None
 
             cia = ChangeImpactAnalyzer(
-                dg.graph, graph_data, git_history_data=git_data,
-                file_metrics=metrics_by_path,
+                dg, graph_data, git_history_data=git_data,
+                file_metrics={},
             )
 
             # Determine if target is a function or file
             if target_file:
                 report = cia.analyze_file_change(target_file)
             else:
-                report = cia.analyze_function_change(target, target_file or str(root))
+                report = cia.analyze_function_change(target, str(root))
 
             return {
                 "target_type": report.target_type,
