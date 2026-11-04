@@ -218,3 +218,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# CodeDNA Dashboard
+dashboard/node_modules/
+dashboard/dist/
+dashboard/.vite/
+dashboard/*.local
