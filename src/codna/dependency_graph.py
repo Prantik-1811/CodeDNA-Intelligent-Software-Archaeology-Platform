@@ -115,6 +115,7 @@ class DependencyGraph:
         file_asts: list[FileAST],
         file_paths: list[Path],
         root: Path,
+        skip_call_edges: bool = False,
     ) -> DependencyGraphData:
         """Build the full dependency graph from parsed file ASTs."""
         # Index files by module path for import resolution
@@ -146,9 +147,11 @@ class DependencyGraph:
         for file_ast in file_asts:
             self._add_import_edges(file_ast, module_index)
 
-        # Add call edges (function-level)
-        for file_ast in file_asts:
-            self._add_call_edges(file_ast)
+        # Add call edges (function-level) - skipped on platforms where
+        # tree-sitter node access crashes (e.g. Windows + Python 3.14)
+        if not skip_call_edges:
+            for file_ast in file_asts:
+                self._add_call_edges(file_ast)
 
         # Add inheritance edges (class-level)
         for file_ast in file_asts:

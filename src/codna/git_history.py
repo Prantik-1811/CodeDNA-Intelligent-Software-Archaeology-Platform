@@ -145,12 +145,9 @@ class GitHistoryAnalyzer:
 
             insertions = 0
             deletions = 0
-            try:
-                stats = commit.stats.total
-                insertions = stats.get("insertions", 0)
-                deletions = stats.get("deletions", 0)
-            except Exception:
-                pass
+            # commit.stats spawns background threads that can crash on
+            # Windows + Python 3.14. Skip stats collection for stability.
+            # Insertion/deletion counts are not critical for risk scoring.
 
             commits.append(
                 CommitInfo(

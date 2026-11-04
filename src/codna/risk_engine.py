@@ -284,7 +284,18 @@ class RiskEngine:
     # ------------------------------------------------------------------
     def _build_summary(self, modules: list[ModuleRisk]) -> dict:
         if not modules:
-            return {}
+            return {
+                "total_modules": 0,
+                "average_risk_score": 0.0,
+                "max_risk_score": 0.0,
+                "critical_count": 0,
+                "high_count": 0,
+                "medium_count": 0,
+                "low_count": 0,
+                "critical_modules": [],
+                "high_risk_modules": [],
+                "top_investigation_priorities": [],
+            }
 
         critical = [m for m in modules if m.risk_level == "critical"]
         high = [m for m in modules if m.risk_level == "high"]

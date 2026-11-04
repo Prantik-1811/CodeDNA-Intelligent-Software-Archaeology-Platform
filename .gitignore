@@ -224,3 +224,6 @@ dashboard/node_modules/
 dashboard/dist/
 dashboard/.vite/
 dashboard/*.local
+
+# Database
+*.db
