@@ -23,6 +23,9 @@ dependencies = [
 [project.scripts]
 codna = "codna.cli:main"
 
+[tool.vercel]
+entrypoint = "src.codna.api:app"
+
 [dependency-groups]
 dev = [
     "pytest>=8.0.0",
