@@ -28,8 +28,7 @@ from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse, RedirectResponse
 from git.exc import GitCommandError, InvalidGitRepositoryError, NoSuchPathError
 
 from .change_impact import ChangeImpactAnalyzer
@@ -328,14 +327,9 @@ def create_app() -> FastAPI:
     )
     init_db()
 
-    # Serve frontend static files from the same origin (no CORS issues)
-    dashboard_dist = Path(__file__).resolve().parent.parent.parent / "dashboard" / "dist"
-    if dashboard_dist.exists():
-        app.mount("/assets", StaticFiles(directory=str(dashboard_dist / "assets")), name="assets")
-
-        @app.get("/")
-        async def serve_frontend():
-            return FileResponse(str(dashboard_dist / "index.html"))
+    @app.get("/")
+    def api_root():
+        return {"name": "CodeDNA API", "status": "ok", "docs": "/docs"}
 
     # ------------------------------------------------------------------
     # Helpers
