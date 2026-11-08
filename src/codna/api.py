@@ -474,7 +474,7 @@ def create_app() -> FastAPI:
                 db.add(user)
                 db.commit()
                 db.refresh(user)
-            frontend = os.getenv("CODNA_FRONTEND_URL") or str(request.base_url).rstrip("/")
+            frontend = os.getenv("CODNA_FRONTEND_URL") or str(request.base_url).rstrip("/") + "/dashboard"
             redirect = RedirectResponse(f"{frontend}/?auth=success")
             _start_session(redirect, db, user)
             return redirect

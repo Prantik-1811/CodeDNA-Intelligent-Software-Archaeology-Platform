@@ -26,7 +26,7 @@ export function App() {
   const [authError, setAuthError] = useState("")
   const [authLoading, setAuthLoading] = useState(false)
 
-  const apiBase = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8001"
+  const apiBase = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8001" : "")
 
   useEffect(() => {
     fetch(`${apiBase}/auth/me`, { credentials: "include" })

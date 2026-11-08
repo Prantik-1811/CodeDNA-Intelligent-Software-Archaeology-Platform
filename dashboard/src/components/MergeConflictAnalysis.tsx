@@ -13,7 +13,7 @@ interface ConflictAnalysis {
   ai_explanation: string
 }
 
-const apiBase = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8001"
+const apiBase = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8001" : "")
 
 export default function MergeConflictAnalysis({ repositoryId }: { repositoryId: number }) {
   const [branches, setBranches] = useState<string[]>([])
