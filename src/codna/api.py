@@ -618,7 +618,8 @@ def create_app() -> FastAPI:
                     ),
                 ) from exc
 
-            data_root = Path(os.getenv("CODNA_DATA_DIR", Path.home() / ".codedna"))
+            default_data_root = Path("/tmp/codna-data") if os.getenv("VERCEL") else Path.home() / ".codedna"
+            data_root = Path(os.getenv("CODNA_DATA_DIR", default_data_root))
             try:
                 metadata, local_path = ingest_public_github_repository(
                     repo_in.repo_url, data_root

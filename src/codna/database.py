@@ -7,6 +7,7 @@ analysis jobs, risk results, and impact reports.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import os
 from typing import Optional
 
 from sqlalchemy import (
@@ -138,9 +139,12 @@ _engine = None
 _SessionLocal = None
 
 
-def init_db(database_url: str = "sqlite:///./codna.db") -> None:
+def init_db(database_url: Optional[str] = None) -> None:
     """Initialize the SQLAlchemy engine and create all tables."""
     global _engine, _SessionLocal
+    database_url = database_url or os.getenv("CODNA_DATABASE_URL")
+    if database_url is None:
+        database_url = "sqlite:////tmp/codna.db" if os.getenv("VERCEL") else "sqlite:///./codna.db"
     _engine = create_engine(database_url, connect_args={"check_same_thread": False})
     Base.metadata.create_all(_engine)
     _SessionLocal = sessionmaker(
