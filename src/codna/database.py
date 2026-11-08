@@ -6,7 +6,7 @@ analysis jobs, risk results, and impact reports.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import (
@@ -25,6 +25,10 @@ class Base(DeclarativeBase):
     pass
 
 
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 class Repository(Base):
     __tablename__ = "repositories"
 
@@ -32,9 +36,47 @@ class Repository(Base):
     repo_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     local_path: Mapped[str] = mapped_column(String(1000), nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="registered")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now
+    )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    email: Mapped[str] = mapped_column(String(320), unique=True, index=True, nullable=False)
+    display_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    password_hash: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    provider: Mapped[str] = mapped_column(String(40), default="email", nullable=False)
+    provider_subject: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+
+class AuthSession(Base):
+    __tablename__ = "auth_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class RepositorySnapshot(Base):
+    __tablename__ = "repository_snapshots"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    repo_id: Mapped[int] = mapped_column(
+        ForeignKey("repositories.id"), nullable=False, unique=True, index=True
+    )
+    metadata_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now
     )
 
 
@@ -48,8 +90,12 @@ class AnalysisJob(Base):
     status: Mapped[str] = mapped_column(String(50), default="pending")
     result_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now
+    )
+    completed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
 
 class ModuleRisk(Base):
@@ -63,7 +109,9 @@ class ModuleRisk(Base):
     risk_score: Mapped[float] = mapped_column(Integer, default=0)
     risk_level: Mapped[str] = mapped_column(String(50), default="low")
     features_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now
+    )
 
 
 class ImpactReport(Base):
@@ -77,7 +125,9 @@ class ImpactReport(Base):
     risk_score: Mapped[float] = mapped_column(Integer, default=0)
     risk_level: Mapped[str] = mapped_column(String(50), default="low")
     report_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now
+    )
 
 
 # ---------------------------------------------------------------------------

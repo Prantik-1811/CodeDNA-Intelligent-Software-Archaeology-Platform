@@ -1,23 +1,21 @@
-# CodeDNA Dashboard
+# React + TypeScript + Vite + shadcn/ui
 
-React + TypeScript frontend for the CodeDNA backend API.
+This is a template for a new Vite project with React, TypeScript, and shadcn/ui.
 
-## Development
+## Adding components
+
+To add components to your app, run the following command:
 
 ```bash
-cd dashboard
-npm install
-npm run dev
+npx shadcn@latest add button
 ```
 
-The app connects to the FastAPI backend at `http://localhost:8000` by default. Set `VITE_API_BASE_URL` to override.
+This will place the ui components in the `src/components` directory.
 
-## Screens
+## Using components
 
-- Repository overview
-- File explorer
-- Dependency graph
-- Function call graph
-- Git history timeline
-- Risk heatmap
-- Change impact explorer
+To use the components in your app, import them as follows:
+
+```tsx
+import { Button } from "@/components/ui/button"
+```

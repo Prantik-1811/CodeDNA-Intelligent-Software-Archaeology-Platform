@@ -90,6 +90,45 @@ def test_graph_endpoint():
     assert "metrics" in graph
 
 
+def test_repository_tree_endpoint(tmp_path):
+    source_dir = tmp_path / "src"
+    source_dir.mkdir()
+    source_file = source_dir / "main.py"
+    source_file.write_text("print('hello')\n", encoding="utf-8")
+    (tmp_path / "README.md").write_text("# Example\n", encoding="utf-8")
+    ignored_dir = tmp_path / "node_modules"
+    ignored_dir.mkdir()
+    (ignored_dir / "ignored.js").write_text("", encoding="utf-8")
+    cache_dir = tmp_path / ".pytest_cache"
+    cache_dir.mkdir()
+    (cache_dir / "ignored.txt").write_text("", encoding="utf-8")
+
+    client = TestClient(create_app())
+    response = client.post(
+        "/repositories",
+        json={"local_path": str(tmp_path), "status": "registered"},
+    )
+    repo_id = response.json()["id"]
+
+    response = client.get(f"/repositories/{repo_id}/tree")
+
+    assert response.status_code == 200
+    tree = response.json()
+    assert tree["root"] == tmp_path.name
+    assert tree["file_count"] == 2
+    assert tree["directory_count"] == 1
+    assert tree["languages"] == {"python": 1, "markdown": 1}
+    assert {
+        "path": "src/main.py",
+        "name": "main.py",
+        "extension": ".py",
+        "size": source_file.stat().st_size,
+        "language": "python",
+        "is_source": True,
+    } in tree["files"]
+    assert tree["last_analyzed_at"] is None
+
+
 def test_risk_endpoint():
     app = create_app()
     client = TestClient(app)

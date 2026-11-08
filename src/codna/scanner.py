@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from .git_utils import clone_repository, get_git_info, is_ignored_git
+from .git_utils import get_git_info
 from .language import detect_language, group_files_by_language, is_source_file
 from .metadata import extract_metadata
 from .walker import RepoWalker
@@ -55,12 +55,10 @@ class RepositoryScanner:
 
         grouped = group_files_by_language(files)
 
-        from .git_utils import get_git_info
-
         git_info = get_git_info(self.root)
 
         repository = {
-            "repo_url": git_info.repo_url,
+            "repo_url": self.repo_url or git_info.repo_url,
             "local_path": str(git_info.local_path),
             "commit_hash": git_info.commit_hash,
             "branch": git_info.branch,

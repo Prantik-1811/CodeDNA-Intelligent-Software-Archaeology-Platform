@@ -68,7 +68,7 @@ dashboard/           # Week 9: React + TypeScript frontend
 ## Important Notes
 
 - Do not commit `node_modules/` or `.pytest_cache/`
-- The dashboard connects to the FastAPI backend at `http://localhost:8000`
+- The dashboard connects to the FastAPI backend at `http://127.0.0.1:8001`
 - Set `VITE_API_BASE_URL` to override the API base URL
 - Tree-sitter parsing creates a fresh Parser per file for stability
 - Risk scores are investigation priorities, not proof of bugs

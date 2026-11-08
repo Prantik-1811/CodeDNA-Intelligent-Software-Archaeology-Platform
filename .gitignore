@@ -1,3 +1,7 @@
+
+implementationplan.md
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -219,11 +223,15 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# CodeDNA Dashboard
+# CodeDNA dashboard
 dashboard/node_modules/
 dashboard/dist/
 dashboard/.vite/
 dashboard/*.local
 
-# Database
+# Local database
 *.db
+
+# Local repository clones
+/data/repositories/
+/.codedna/repositories/

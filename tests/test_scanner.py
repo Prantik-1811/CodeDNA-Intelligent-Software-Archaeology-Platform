@@ -28,6 +28,37 @@ def test_walker_ignores_node_modules():
     assert not any("node_modules" in p for p in paths)
 
 
+def test_walker_ignores_generated_directories_and_supports_custom_patterns(tmp_path):
+    ignored_names = [
+        ".git",
+        "node_modules",
+        "__pycache__",
+        ".venv",
+        "venv",
+        "dist",
+        "build",
+        "coverage",
+    ]
+    for name in ignored_names:
+        directory = tmp_path / "nested" / name
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / "ignored.py").write_text("", encoding="utf-8")
+    keep = tmp_path / "src" / "keep.py"
+    keep.parent.mkdir()
+    keep.write_text("", encoding="utf-8")
+
+    files = RepoWalker(tmp_path).walk_files()
+    assert files == [keep]
+
+    generated = tmp_path / "generated" / "file.py"
+    generated.parent.mkdir()
+    generated.write_text("", encoding="utf-8")
+    assert generated in RepoWalker(tmp_path, ignore_patterns=[]).walk_files()
+    assert generated not in RepoWalker(
+        tmp_path, ignore_patterns=["generated/**"]
+    ).walk_files()
+
+
 def test_detect_language_python():
     lang = detect_language(Path("foo.py"))
     assert lang is not None
@@ -83,3 +114,14 @@ def test_scanner_output_has_language_breakdown():
     result = scanner.scan()
     assert "languages" in result.summary
     assert "python" in result.summary["languages"]
+
+
+def test_scanner_supports_non_git_directory_and_explicit_url(tmp_path):
+    (tmp_path / "example.py").write_text("print('hello')\n", encoding="utf-8")
+
+    result = RepositoryScanner(
+        tmp_path, repo_url="https://example.com/example.git"
+    ).scan()
+
+    assert result.repository["repo_url"] == "https://example.com/example.git"
+    assert result.summary["source_files"] == 1

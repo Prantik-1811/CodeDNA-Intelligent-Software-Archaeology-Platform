@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict
 # ---------------------------------------------------------------------------
 class RepositoryBase(BaseModel):
     repo_url: Optional[str] = None
-    local_path: str
+    local_path: str = ""
     status: str = "registered"
 
 
