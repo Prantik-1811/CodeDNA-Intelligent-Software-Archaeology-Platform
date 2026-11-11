@@ -103,18 +103,18 @@ secret store, rotate it before deployment.
 
 ### First hosted deployment on Render
 
-For the initial hosted version, deploy the dashboard and API as Docker Web
-Services, and use Render Postgres. The dashboard currently serves from
-`/dashboard/`, so keep its Docker/Nginx configuration for this first deployment.
-Keep the API's `/codna-data` directory on a persistent disk because it stores
-repository clones. This disk requires a paid Render service; without persistent
-storage, clones disappear when the service restarts or redeploys.
+For the initial hosted version, deploy the dashboard as a Static Site, the API
+as a Docker Web Service, and use Render Postgres. The dashboard build supports
+both the local `/dashboard/` path and the hosted root path. Keep the API's
+`/codna-data` directory on a persistent disk because it stores repository
+clones. This disk requires a paid Render service; without persistent storage,
+clones disappear when the service restarts or redeploys.
 
 1. Connect the public GitHub repository to Render.
-2. Create a **Web Service** for the dashboard from the repository, set root
-   directory to `dashboard`, and use its `Dockerfile`. Set `PORT=80`,
-   `VITE_API_BASE_URL` to the API's public HTTPS URL, and optionally set
-   `VITE_SUPPORT_EMAIL`. Set the health check path to `/dashboard/`.
+2. Create a **Static Site** for the dashboard from the repository, set root
+   directory to `dashboard`, build command to `npm ci && npm run build`, and
+   publish directory to `dist`. Set `VITE_BASE_PATH=/`, `VITE_API_BASE_URL` to
+   the API's public HTTPS URL, and optionally set `VITE_SUPPORT_EMAIL`.
 3. Create a **PostgreSQL** database in Render.
 4. Create a **Web Service** for the API from the repository root, using the root
    `Dockerfile`. Set its health check path to `/`, and attach a persistent disk
@@ -122,16 +122,16 @@ storage, clones disappear when the service restarts or redeploys.
 5. Set these API environment variables in Render's secret/environment settings:
    `CODNA_DATABASE_URL` (the database's internal URL), `CODNA_DATA_DIR=/codna-data`,
    `CODNA_AUTH_SECRET` (a newly generated random secret),
-   `CODNA_COOKIE_SECURE=true`, `CODNA_FRONTEND_URL` (the dashboard's HTTPS URL
-   plus `/dashboard/`), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
+   `CODNA_COOKIE_SECURE=true`, `CODNA_FRONTEND_URL` (the dashboard's HTTPS URL),
+   `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
    `GOOGLE_REDIRECT_URI`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, and
    `GITHUB_REDIRECT_URI`.
 6. Set the production OAuth callbacks to
    `https://<api-host>/auth/google/callback` and
    `https://<api-host>/auth/github/callback`. Create separate provider apps for
    production so local OAuth callbacks continue working.
-7. After both services are created, update `VITE_API_BASE_URL` with the API URL
-   and redeploy the dashboard.
+7. After both services are created, set the dashboard's `VITE_API_BASE_URL` to
+   the API URL and redeploy the dashboard.
 
 Keep provider secrets and database credentials in Render's environment
 settings, never in this repository. Render's deployment screens and pricing can
