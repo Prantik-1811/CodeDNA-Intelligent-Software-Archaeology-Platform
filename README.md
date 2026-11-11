@@ -79,7 +79,11 @@ the corresponding values in `.env`. Set callback URLs to the actual API URL,
 for example `http://127.0.0.1:8001/auth/google/callback` locally. For an HTTPS
 deployment, use the public API callback URL, a unique `CODNA_AUTH_SECRET`,
 `CODNA_COOKIE_SECURE=true`, and the public dashboard URL in
-`CODNA_FRONTEND_URL`. Never commit `.env` or share production credentials.
+`CODNA_FRONTEND_URL`. If the dashboard and API are on different sites (for
+example, separate `onrender.com` services), also set
+`CODNA_COOKIE_SAMESITE=none`; `SameSite=None` requires secure HTTPS cookies.
+For local development, keep `CODNA_COOKIE_SAMESITE=lax` and
+`CODNA_COOKIE_SECURE=false`. Never commit `.env` or share production credentials.
 
 See [RISK_MODEL.md](RISK_MODEL.md) for the current risk methodology and its
 validation status.
@@ -122,7 +126,8 @@ clones disappear when the service restarts or redeploys.
 5. Set these API environment variables in Render's secret/environment settings:
    `CODNA_DATABASE_URL` (the database's internal URL), `CODNA_DATA_DIR=/codna-data`,
    `CODNA_AUTH_SECRET` (a newly generated random secret),
-   `CODNA_COOKIE_SECURE=true`, `CODNA_FRONTEND_URL` (the dashboard's HTTPS URL),
+   `CODNA_COOKIE_SECURE=true`, `CODNA_COOKIE_SAMESITE=none`,
+   `CODNA_FRONTEND_URL` (the dashboard's HTTPS URL),
    `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
    `GOOGLE_REDIRECT_URI`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, and
    `GITHUB_REDIRECT_URI`.

@@ -379,13 +379,19 @@ def create_app() -> FastAPI:
             )
         )
         db.commit()
+        cookie_secure = os.getenv("CODNA_COOKIE_SECURE", "").lower() == "true"
+        cookie_samesite = os.getenv(
+            "CODNA_COOKIE_SAMESITE", "none" if cookie_secure else "lax"
+        ).lower()
+        if cookie_samesite not in {"lax", "strict", "none"}:
+            cookie_samesite = "lax"
         response.set_cookie(
             "codna_session",
             token,
             max_age=30 * 24 * 60 * 60,
             httponly=True,
-            samesite="lax",
-            secure=os.getenv("CODNA_COOKIE_SECURE", "").lower() == "true",
+            samesite=cookie_samesite,
+            secure=cookie_secure,
         )
 
     @app.post("/auth/register", status_code=201)
