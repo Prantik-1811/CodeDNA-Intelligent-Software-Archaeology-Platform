@@ -18,6 +18,8 @@ from sqlalchemy import (
     String,
     Text,
     create_engine,
+    inspect,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
@@ -54,6 +56,7 @@ class User(Base):
     password_hash: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     provider: Mapped[str] = mapped_column(String(40), default="email", nullable=False)
     provider_subject: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    avatar_url: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
 
@@ -145,8 +148,19 @@ def init_db(database_url: Optional[str] = None) -> None:
     database_url = database_url or os.getenv("CODNA_DATABASE_URL")
     if database_url is None:
         database_url = "sqlite:////tmp/codna.db" if os.getenv("VERCEL") else "sqlite:///./codna.db"
-    _engine = create_engine(database_url, connect_args={"check_same_thread": False})
+    if database_url.startswith("postgresql://"):
+        # The project installs psycopg v3; SQLAlchemy's bare postgresql:// URL
+        # otherwise defaults to the separate psycopg2 driver.
+        database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    engine_options = {}
+    if database_url.startswith("sqlite:"):
+        engine_options["connect_args"] = {"check_same_thread": False}
+    _engine = create_engine(database_url, **engine_options)
     Base.metadata.create_all(_engine)
+    # `create_all` creates new tables but does not add columns to existing user tables.
+    if "avatar_url" not in {column["name"] for column in inspect(_engine).get_columns("users") }:
+        with _engine.begin() as connection:
+            connection.execute(text("ALTER TABLE users ADD COLUMN avatar_url VARCHAR(1000)"))
     _SessionLocal = sessionmaker(
         autocommit=False, autoflush=False, bind=_engine
     )

@@ -51,10 +51,12 @@ application with a React TypeScript frontend.
 
 ### Layer 7: Bug Prediction & Risk Engine (Week 7)
 - `src/codna/risk_engine.py` — RiskEngine
-  - Weighted scoring: complexity (25%), change frequency (20%),
-    contributors (15%), dependency centrality (20%), bug-fix commits (10%),
-    code churn (10%)
-  - 0-100 risk score, critical/high/medium/low levels
+  - Evidence-aware hotspot prioritization using complexity, change frequency,
+    dependency degree, bug-fix history, and code churn
+  - 0-100 relative investigation priority; not a defect probability or
+    security vulnerability/severity score
+  - Model rules, limits, thresholds, benchmark choices, and caveats:
+    `RISK_MODEL.md`
 
 ### Layer 8: FastAPI Backend (Week 8)
 - `src/codna/api.py` — REST API with 8 endpoints

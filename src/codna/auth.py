@@ -66,7 +66,7 @@ def oauth_config(provider: str) -> dict[str, str]:
         "client_secret": os.getenv(f"{prefix}_CLIENT_SECRET", ""),
         "redirect_uri": os.getenv(
             f"{prefix}_REDIRECT_URI",
-            f"http://127.0.0.1:8001/auth/{provider}/callback",
+            f"http://localhost:8001/auth/{provider}/callback",
         ),
     }
     if not values["client_id"] or not values["client_secret"]:

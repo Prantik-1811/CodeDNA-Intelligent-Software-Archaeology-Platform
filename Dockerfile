@@ -12,14 +12,14 @@ RUN apt-get update && apt-get install -y \
 # Copy dependency files first for layer caching
 COPY pyproject.toml ./
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -e ".[dev]"
-
 # Copy application source
 COPY src/ ./src/
+
+# Install Python dependencies and the application package
+RUN pip install --no-cache-dir .
 
 # Expose API port
 EXPOSE 8000
 
 # Run the API server
-CMD ["uvicorn", "codna.api:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uvicorn codna.api:app --host 0.0.0.0 --port ${PORT:-8000}"]

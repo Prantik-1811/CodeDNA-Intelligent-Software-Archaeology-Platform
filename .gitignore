@@ -155,6 +155,7 @@ activemq-data/
 
 # Environments
 .env
+.env.local
 .envrc
 .venv
 env/
@@ -231,6 +232,8 @@ dashboard/*.local
 
 # Local database
 *.db
+*.db-shm
+*.db-wal
 
 # Local repository clones
 /data/repositories/

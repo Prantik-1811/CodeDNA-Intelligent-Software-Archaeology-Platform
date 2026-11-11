@@ -18,7 +18,7 @@ export function App() {
   const [activeSection, setActiveSection] = useState("Overview")
   const [branchHistory, setBranchHistory] = useState<BranchHistory | null>(null)
   const [historyError, setHistoryError] = useState("")
-  const [user, setUser] = useState<{ display_name: string; email: string; provider?: string } | null>(null)
+  const [user, setUser] = useState<{ display_name: string; email: string; provider?: string; avatar_url?: string | null } | null>(null)
   const [authMode, setAuthMode] = useState<"login" | "register">("login")
   const [authEmail, setAuthEmail] = useState("")
   const [authPassword, setAuthPassword] = useState("")
@@ -27,6 +27,7 @@ export function App() {
   const [authLoading, setAuthLoading] = useState(false)
 
   const apiBase = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://127.0.0.1:8001" : "")
+  const supportEmail = import.meta.env.VITE_SUPPORT_EMAIL || ""
 
   useEffect(() => {
     fetch(`${apiBase}/auth/me`, { credentials: "include" })
@@ -130,7 +131,7 @@ export function App() {
     dashboard ? (
       <main className="flex min-h-svh bg-[#07070a] text-white">
         <LineSidebar
-          items={["Overview", "File Analysis", "Change Impact / Risk", "Merge Conflict Analysis", "Profile"]}
+          items={["Overview", "File Analysis", "Change Impact / Risk", "Merge Conflict Analysis", "Profile", "Help & Contact"]}
           accentColor="#A855F7"
           textColor="#c4c4c4"
           markerColor="#6c6c6c"
@@ -162,7 +163,7 @@ export function App() {
                 {historyError ? (
                   <p className="text-sm text-rose-300">{historyError}</p>
                 ) : branchHistory ? (
-                  <BranchTree history={branchHistory} />
+                  <BranchTree history={branchHistory} repositoryUrl={repoUrl} />
                 ) : (
                   <p className="text-sm text-white/45">Loading branch history…</p>
                 )}
@@ -181,7 +182,7 @@ export function App() {
                   handle={user?.email?.split("@")[0] || "codna-user"}
                   status="Online"
                   contactText="Contact"
-                  avatarUrl="/path/to/portrait.png"
+                  avatarUrl={user?.avatar_url || ""}
                   iconUrl="/assets/demo/iconpattern.png"
                   holo={0.8}
                   glare={0.5}
@@ -195,6 +196,44 @@ export function App() {
                   theme="dark"
                   onContactClick={() => console.log("Contact clicked")}
                 />
+              </div>
+            ) : activeSection === "Help & Contact" ? (
+              <div className="mt-10 grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+                <section className="rounded-3xl border border-white/10 bg-white/[0.035] p-7 sm:p-9">
+                  <p className="font-mono text-xs uppercase tracking-[0.28em] text-cyan-300">Help &amp; support</p>
+                  <h2 className="mt-3 text-2xl font-semibold">Find an answer</h2>
+                  <p className="mt-3 max-w-2xl leading-7 text-white/65">
+                    Quick guidance for analyzing a repository, signing in, and reading your results.
+                  </p>
+                  <div className="mt-8 space-y-6">
+                    <div>
+                      <h3 className="font-medium">Can’t analyze a repository?</h3>
+                      <p className="mt-1 text-sm leading-6 text-white/55">Enter a public GitHub repository URL, such as https://github.com/owner/repository. If you see “Failed to fetch,” the CodeDNA API may be offline.</p>
+                    </div>
+                    <div>
+                      <h3 className="font-medium">Having trouble signing in?</h3>
+                      <p className="mt-1 text-sm leading-6 text-white/55">If Google or GitHub shows an access or callback error, contact the person who runs this CodeDNA instance. They can check the provider settings.</p>
+                    </div>
+                    <div>
+                      <h3 className="font-medium">What does a risk score mean?</h3>
+                      <p className="mt-1 text-sm leading-6 text-white/55">It highlights files worth investigating based on repository signals. It does not confirm a bug or security vulnerability.</p>
+                    </div>
+                  </div>
+                </section>
+                <aside className="flex flex-col justify-between rounded-3xl border border-cyan-300/20 bg-cyan-300/[0.045] p-7 sm:p-9">
+                  <div>
+                    <p className="font-mono text-xs uppercase tracking-[0.28em] text-cyan-300">Contact</p>
+                    <h2 className="mt-3 text-2xl font-semibold">Contact the maintainer</h2>
+                    <p className="mt-3 leading-7 text-white/60">Tell us what you were doing and include any error message. Never email your password, access token, or OAuth secret.</p>
+                  </div>
+                  {supportEmail ? (
+                    <a className="mt-8 inline-flex w-fit items-center rounded-full bg-white px-5 py-3 font-medium text-black transition hover:bg-cyan-100" href={`mailto:${supportEmail}?subject=CodeDNA%20help`}>
+                      Email support
+                    </a>
+                  ) : (
+                    <p className="mt-8 text-sm text-white/50">Support contact has not been configured for this deployment.</p>
+                  )}
+                </aside>
               </div>
             ) : (
               <p className="mt-4 text-white/55">This section is ready for the next analysis view.</p>

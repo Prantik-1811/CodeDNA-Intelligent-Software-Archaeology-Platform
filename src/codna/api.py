@@ -22,6 +22,7 @@ import re
 import os
 import hashlib
 import secrets
+from urllib.parse import urlsplit
 from datetime import timedelta
 from pathlib import Path
 from typing import Any, Optional
@@ -94,7 +95,13 @@ def _session_hash(token: str) -> str:
 
 
 def _public_user(user: User) -> dict[str, Any]:
-    return {"id": user.id, "email": user.email, "display_name": user.display_name, "provider": user.provider}
+    return {
+        "id": user.id,
+        "email": user.email,
+        "display_name": user.display_name,
+        "provider": user.provider,
+        "avatar_url": user.avatar_url,
+    }
 
 
 def _merge_conflict_analysis(repository_path: Path, base_branch: str, compare_branch: str) -> dict[str, Any]:
@@ -318,9 +325,12 @@ def _file_relationships(root: Path, relative_path: str, language: str | None) ->
 
 def create_app() -> FastAPI:
     app = FastAPI(title="CodeDNA API", version="0.1.0")
+    frontend_url = os.getenv("CODNA_FRONTEND_URL", "http://localhost:5173/dashboard/")
+    frontend_parts = urlsplit(frontend_url)
+    frontend_origin = f"{frontend_parts.scheme}://{frontend_parts.netloc}" if frontend_parts.scheme and frontend_parts.netloc else "http://localhost:5173"
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=[frontend_origin],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -458,17 +468,26 @@ def create_app() -> FastAPI:
         email = (profile.get("email") or "").strip().lower()
         subject = str(profile.get("sub") or profile.get("id") or "")
         display_name = profile.get("name") or profile.get("login") or email
+        avatar_url = profile.get("picture") or profile.get("avatar_url")
         if not email or not subject:
             raise HTTPException(status_code=400, detail="OAuth provider did not return a usable profile.")
         db = get_session()
         try:
             user = db.query(User).filter(User.email == email).first()
             if user is None:
-                user = User(email=email, display_name=display_name, provider=provider, provider_subject=subject)
+                user = User(
+                    email=email,
+                    display_name=display_name,
+                    provider=provider,
+                    provider_subject=subject,
+                    avatar_url=avatar_url,
+                )
                 db.add(user)
-                db.commit()
-                db.refresh(user)
-            frontend = os.getenv("CODNA_FRONTEND_URL") or str(request.base_url).rstrip("/") + "/dashboard"
+            elif avatar_url:
+                user.avatar_url = avatar_url
+            db.commit()
+            db.refresh(user)
+            frontend = (os.getenv("CODNA_FRONTEND_URL") or str(request.base_url).rstrip("/") + "/dashboard").rstrip("/")
             redirect = RedirectResponse(f"{frontend}/?auth=success")
             _start_session(redirect, db, user)
             return redirect
@@ -1076,6 +1095,14 @@ def create_app() -> FastAPI:
             )
             risk_report = engine.analyze()
             return {
+                "methodology": {
+                    "name": "CodeDNA provisional hotspot prioritization",
+                    "version": "2",
+                    "purpose": "relative engineering investigation priority",
+                    "not_a": ["defect probability", "security vulnerability finding", "CVSS score"],
+                    "benchmark_status": "not empirically calibrated; OWASP Benchmark for Python is a planned security-detector validation dataset",
+                    "standards_status": "CWE, OWASP ASVS, and CVSS are not implemented by this hotspot score",
+                },
                 "summary": risk_report.summary,
                 "modules": [
                     {

@@ -19,6 +19,14 @@ interface RiskModule {
 }
 
 interface RiskReport {
+  methodology?: {
+    name: string
+    version: string
+    purpose: string
+    not_a: string[]
+    benchmark_status: string
+    standards_status: string
+  }
   summary: Record<string, unknown>
   modules: RiskModule[]
 }
@@ -49,15 +57,15 @@ function List({ items, empty }: { items: ImpactItem[]; empty: string }) {
     <ul className="mt-3 space-y-2">
       {items.slice(0, 8).map((item) => (
         <li key={`${item.file_path}-${item.label}`} className="rounded-lg border border-white/8 bg-black/20 p-3">
-          <p className="truncate font-mono text-xs text-cyan-100">{item.file_path || item.label}</p>
-          <p className="mt-1 text-xs text-white/45">
+          <p className="break-all font-mono text-sm text-cyan-100">{item.file_path || item.label}</p>
+          <p className="mt-2 text-sm leading-6 text-white/70">
             Impact {item.impact_score.toFixed(1)}
             {item.reasons?.length ? ` · ${item.reasons.join(", ")}` : ""}
           </p>
         </li>
       ))}
     </ul>
-  ) : <p className="mt-3 text-sm text-white/35">{empty}</p>
+  ) : <p className="mt-3 text-base text-white/60">{empty}</p>
 }
 
 export default function ChangeImpactRisk({ repositoryId }: { repositoryId: number }) {
@@ -122,7 +130,7 @@ export default function ChangeImpactRisk({ repositoryId }: { repositoryId: numbe
           <select value={target} onChange={(event) => setTarget(event.target.value)} className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/30 px-3 py-2 font-mono text-xs text-white">
             {tree?.files.map((file) => <option key={file.path} value={file.path}>{file.path}</option>)}
           </select>
-          {impact && <span className="rounded-lg border border-white/10 px-3 py-2 text-xs text-white/60">Risk: {impact.risk_level} · {impact.risk_score.toFixed(1)}</span>}
+          {impact && <span className="rounded-lg border border-white/10 px-3 py-2 text-sm text-white/75">Risk: {impact.risk_level} · {impact.risk_score.toFixed(1)}</span>}
         </div>
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           <div>
@@ -146,11 +154,23 @@ export default function ChangeImpactRisk({ repositoryId }: { repositoryId: numbe
 
       <section className="rounded-2xl border border-white/10 bg-[#111113] p-6">
         <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-rose-300/70">Security Analysis</p>
-        <p className="mt-2 text-xs text-white/35">Static repository hotspots and dependency manifests. This is triage, not proof of vulnerabilities.</p>
+        <p className="mt-3 max-w-4xl text-base leading-7 text-white/75">These scores prioritize files for engineering review. They are not confirmed vulnerability findings. Dependency manifests and sensitive-path names are inventory signals only.</p>
+        <div className="mt-5 rounded-2xl border border-cyan-300/20 bg-gradient-to-br from-cyan-300/[0.08] to-transparent p-5 sm:p-6">
+          <p className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200">Standards &amp; methodology</p>
+          <h2 className="mt-3 text-xl font-semibold text-white">CodeDNA hotspot prioritization <span className="font-mono text-sm font-medium text-cyan-100/65">v{risk?.methodology?.version ?? "2"}</span></h2>
+          <p className="mt-2 max-w-4xl text-base leading-7 text-white/80">A relative engineering investigation priority based on code complexity, change frequency, bug-fix history, code churn, and dependency connections. The score is not a probability of defects, a vulnerability rating, or a CVSS score.</p>
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            <div className="rounded-xl border border-white/10 bg-black/25 p-4"><p className="text-sm font-semibold text-white">Used now</p><p className="mt-1.5 text-sm leading-6 text-white/70">Provisional defect-proneness signals. Weights and cutoffs are CodeDNA rules.</p></div>
+            <div className="rounded-xl border border-amber-200/20 bg-amber-200/[0.04] p-4"><p className="text-sm font-semibold text-amber-100">Planned validation</p><p className="mt-1.5 text-sm leading-6 text-white/70">OWASP Benchmark for Python, for a future security-finding engine.</p></div>
+            <div className="rounded-xl border border-white/10 bg-black/25 p-4"><p className="text-sm font-semibold text-white">Not implemented here</p><p className="mt-1.5 text-sm leading-6 text-white/70">CWE mapping, OWASP ASVS verification, and CVSS scoring.</p></div>
+          </div>
+          <p className="mt-4 text-sm leading-6 text-white/65">The hotspot rules have not been calibrated against a labeled defect dataset. Treat the ranking as a review aid, not a quality or security certification.</p>
+          <a href="https://owasp.org/www-project-benchmark/" target="_blank" rel="noreferrer" className="mt-4 inline-flex text-sm font-medium text-cyan-100 underline decoration-cyan-200/40 underline-offset-4 hover:text-white">Read about the OWASP Benchmark for Python <span className="ml-1" aria-hidden="true">↗</span></a>
+        </div>
         <div className="mt-5 grid gap-6 lg:grid-cols-3">
           <div>
-            <h2 className="text-lg font-medium">Vulnerabilities</h2>
-            <List items={(risk?.modules ?? []).filter((module) => module.risk_level.toLowerCase() === "high" || module.risk_level.toLowerCase() === "critical").map((module) => ({ label: module.path, file_path: module.path, impact_score: module.total_score, reasons: [module.explanation] }))} empty="No high-risk modules reported." />
+            <h2 className="text-lg font-medium">Change-risk hotspots</h2>
+            <List items={(risk?.modules ?? []).filter((module) => module.risk_level.toLowerCase() === "high" || module.risk_level.toLowerCase() === "critical").map((module) => ({ label: module.path, file_path: module.path, impact_score: module.total_score, reasons: [module.explanation] }))} empty="No high-priority hotspots reported." />
           </div>
           <div>
             <h2 className="text-lg font-medium">Dependency issues</h2>
