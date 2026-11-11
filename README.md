@@ -4,6 +4,15 @@
 
 CodeDNA is a platform that helps developers understand large and unfamiliar software projects. It analyzes the code, identifies connections between different parts of the application, and shows developers what could be affected when they make changes.
 
+## Live preview
+
+- **Dashboard:** [codedna-intelligent-software-archaeology-oarn.onrender.com](https://codedna-intelligent-software-archaeology-oarn.onrender.com)
+- **API health:** [codedna-intelligent-software-archaeology.onrender.com](https://codedna-intelligent-software-archaeology.onrender.com)
+- **Interactive API docs:** [OpenAPI docs](https://codedna-intelligent-software-archaeology.onrender.com/docs)
+- **Source code:** [GitHub repository](https://github.com/Prantik-1811/CodeDNA-Intelligent-Software-Archaeology-Platform)
+
+This is an early hosted preview. The API currently runs on Render's free service, so its first request after inactivity may take a little while. Repository clones use the service's temporary filesystem and may be removed when it restarts or redeploys. The dashboard and API use separate Render domains; browser privacy settings may block sign-in cookies. If sign-in returns to the login screen, allow cross-site cookies for the dashboard (for example, turn off Brave Shields for it). A custom domain setup can avoid this limitation.
+
 ## Key Features
 
 - Repository structure analysis
@@ -88,7 +97,7 @@ For local development, keep `CODNA_COOKIE_SAMESITE=lax` and
 See [RISK_MODEL.md](RISK_MODEL.md) for the current risk methodology and its
 validation status.
 
-## Prepare for public hosting
+## Self-hosting and production deployment
 
 The Docker Compose file is the self-hosting baseline, not a complete managed
 cloud deployment. Before exposing the API publicly:
@@ -105,14 +114,14 @@ cloud deployment. Before exposing the API publicly:
 If any real credential was included in diagnostic output or shared outside its
 secret store, rotate it before deployment.
 
-### First hosted deployment on Render
+### Render deployment configuration
 
-For the initial hosted version, deploy the dashboard as a Static Site, the API
-as a Docker Web Service, and use Render Postgres. The dashboard build supports
-both the local `/dashboard/` path and the hosted root path. Keep the API's
-`/codna-data` directory on a persistent disk because it stores repository
-clones. This disk requires a paid Render service; without persistent storage,
-clones disappear when the service restarts or redeploys.
+The live preview uses a Render Static Site for the dashboard, a Docker Web
+Service for the API, and Render Postgres. To reproduce or adapt this setup, use
+the following configuration. The dashboard build supports both the local
+`/dashboard/` path and the hosted root path. For durable repository clones,
+attach a persistent disk at `/codna-data`; without one, clones disappear when
+the API restarts or redeploys.
 
 1. Connect the public GitHub repository to Render.
 2. Create a **Static Site** for the dashboard from the repository, set root
@@ -143,30 +152,11 @@ settings, never in this repository. Render's deployment screens and pricing can
 change; confirm the current storage and database plan details before creating
 paid resources.
 
-## Project Status
+## Project status
 
-Currently under development.
+Deployed as an early preview and actively under development. Contributions and
+bug reports are welcome.
 
 ## License
 
 This project is licensed under the MIT License.
-# CodeDNA
-
-## Google OAuth local setup
-
-1. Open [Google Cloud Console](https://console.cloud.google.com/apis/credentials) and create an OAuth 2.0 Client ID with application type **Web application**.
-2. Add this exact authorized redirect URI:
-   `http://127.0.0.1:8001/auth/google/callback`
-3. Use `.env.example` as a template, then export these variables in the shell
-   that starts the API: `CODNA_AUTH_SECRET`, `GOOGLE_CLIENT_ID`, and
-   `GOOGLE_CLIENT_SECRET`.
-4. Start the API from the repository root with those variables loaded. The demo then uses **Sign in with Google**.
-
-The client ID and secret are never committed. For local PowerShell sessions:
-
-```powershell
-$env:CODNA_AUTH_SECRET = "generate-a-long-random-value"
-$env:GOOGLE_CLIENT_ID = "your-client-id.apps.googleusercontent.com"
-$env:GOOGLE_CLIENT_SECRET = "your-client-secret"
-python -m uvicorn codna.api:app --host 127.0.0.1 --port 8001
-```
